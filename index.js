@@ -2,30 +2,23 @@ const express = require('express');
 const Unblocker = require('unblocker');
 const app = express();
 
-// 1. Setup the Unblocker engine configuration
-const unblocker = new Unblocker({ 
-    prefix: '/proxy/'
-});
+// 1. MUST BE FIRST: Initialize the unblocker engine at the very top of the stack
+const unblocker = new Unblocker({ prefix: '/proxy/' });
+app.use(unblocker);
 
-// 2. MIDDLEWARE FIX: Strip X-Frame-Options and fix CSP headers before they hit Chrome
+// 2. MIDDLEWARE HOOK: Clean up modern security frame blocks AFTER the engine loads
 app.use((req, res, next) => {
-    // Intercept headers when they are being written out
-    const originalWriteHeader = res.writeContinue || res.writeHead;
-    
+    const originalWriteHeader = res.writeHead;
     res.writeHead = function(statusCode, headers) {
         if (headers) {
-            // Delete the headers that force Chrome to show a white screen in iframes
+            // Forcefully drop header blocks that break chromebook frames
             delete headers['x-frame-options'];
             delete headers['X-Frame-Options'];
-            
-            // Clean up Content-Security-Policy frame restrictions if they exist
             if (headers['content-security-policy']) {
-                headers['content-security-policy'] = headers['content-security-policy']
-                    .replace(/frame-ancestors\s+[^;]+(;|\$)/gi, '');
+                headers['content-security-policy'] = headers['content-security-policy'].replace(/frame-ancestors\s+[^;]+(;|\$)/gi, '');
             }
             if (headers['Content-Security-Policy']) {
-                headers['Content-Security-Policy'] = headers['Content-Security-Policy']
-                    .replace(/frame-ancestors\s+[^;]+(;|\$)/gi, '');
+                headers['Content-Security-Policy'] = headers['Content-Security-Policy'].replace(/frame-ancestors\s+[^;]+(;|\$)/gi, '');
             }
         }
         return originalWriteHeader.apply(this, arguments);
@@ -33,10 +26,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// 3. Mount the proxy engine right after our header cleanup middleware
-app.use(unblocker);
-
-// 4. Render the clean parent control bar
+// 3. CONTROL INTERFACE: Render the view controls safely below the engine processing rules
 app.get('/', (req, res) => {
     res.send(`
         <!DOCTYPE html>
@@ -49,22 +39,22 @@ app.get('/', (req, res) => {
                 * { box-sizing: border-box; }
                 html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #121212; font-family: system-ui, sans-serif; overflow: hidden; }
                 
-                /* Layout Nav Bar */
-                .nav-bar { width: 100%; height: 50px; background: #1e1e1e; display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid #2d2d2d; z-index: 999; position: relative; }
+                /* Layout Navigation Interface */
+                .nav-bar { width: 100%; height: 50px; background: #1e1e1e; display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid #2d2d2d; z-index: 9999; position: relative; }
                 .search-box { flex: 1; height: 32px; background: #2b2b2b; border: 1px solid #3a3a3a; border-radius: 6px; padding: 0 12px; color: #fff; font-size: 14px; outline: none; transition: border-color 0.2s; }
                 .search-box:focus { border-color: #007acc; }
                 .go-btn { height: 32px; padding: 0 16px; background: #007acc; color: white; border: none; border-radius: 6px; margin-left: 10px; cursor: pointer; font-weight: 500; font-size: 14px; }
                 .go-btn:hover { background: #0062a3; }
                 
-                /* Full View Sandbox */
-                .view-container { width: 100%; height: calc(100% - 50px); position: relative; background: #fff; }
-                iframe { width: 100%; height: 100%; border: none; background: #fff; }
+                /* Main Protected Display Sandbox Frame */
+                .view-container { width: 100%; height: calc(100% - 50px); position: relative; background: #ffffff; }
+                iframe { width: 100%; height: 100%; border: none; background: #ffffff; }
             </style>
         </head>
         <body>
 
             <div class="nav-bar">
-                <input type="text" id="targetUrl" class="search-box" placeholder="Enter target site address (e.g., example.com)" value="https://">
+                <input type="text" id="targetUrl" class="search-box" placeholder="Enter web address here (e.g. google.com)" value="https://">
                 <button onclick="launchSite()" class="go-btn">Go</button>
             </div>
 
@@ -81,7 +71,7 @@ app.get('/', (req, res) => {
                         input = 'https://' + input;
                     }
                     
-                    // Route traffic seamlessly inside the modified server configuration
+                    // Route inside the framework without breaking root execution scopes
                     const proxiedPath = window.location.origin + '/proxy/' + input;
                     document.getElementById('sandboxFrame').src = proxiedPath;
                 }
@@ -98,4 +88,4 @@ app.get('/', (req, res) => {
 });
 
 const port = process.env.PORT || 8080;
-app.listen(port, () => console.log(`Stealth workspace running on port ${port}`)).on('upgrade', unblocker.onUpgrade);
+app.listen(port, () => console.log(`Stealth workspace active on port ${port}`)).on('upgrade', unblocker.onUpgrade);

@@ -8,6 +8,6 @@
   },
   "dependencies": {
     "express": "^4.19.2",
-    "unblocker": "^0.3.11"
+    "unblocker": "^2.3.1"
   }
 }
